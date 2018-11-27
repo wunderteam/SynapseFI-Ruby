@@ -23,7 +23,10 @@ module SynapsePayRest
                 :email_match, :name_match, :phonenumber_match, :address_street,
                 :address_city, :address_subdivision, :address_country_code, 
                 :address_postal_code, :payee_address, :payee_name, :other, :network,
-                :document_id, :card_type
+                :document_id, :interchange_type, :card_hash, :is_international, :allow_foreign_transactions,
+                :atm_withdrawal_limit, :max_pin_attempts, :pos_withdrawal_limit, :security_alerts,
+                :card_type, :access_token, :portfolio_BTC, :portfolio_ETH, :card_style_id,
+                :monthly_withdrawals_remaining
 
     class << self
       # Creates a new node in the API associated to the provided user and
@@ -78,26 +81,30 @@ module SynapsePayRest
       # @note Not meant to be accessed directly on BaseNode but through children.
       def from_response(user, response)
         args = {
-          user:                 user,
-          type:                 response['type'],
-          id:                   response['_id'],
-          is_active:            response['is_active'],
-          permission:           response['allowed'],
-          nickname:             response['info']['nickname'],
-          name_on_account:      response['info']['name_on_account'],
-          bank_long_name:       response['info']['bank_long_name'],
-          bank_name:            response['info']['bank_name'],
-          account_type:         response['info']['type'],
-          account_class:        response['info']['class'],
-          account_number:       response['info']['account_num'],
-          routing_number:       response['info']['routing_num'],
-          address:              response['info']['address'],
-          swift:                response['info']['swift'],
-          ifsc:                 response['info']['ifsc'],
-          payee_name:           response['info']['payee_name'],
-          document_id:          response['info']['document_id'],
-          network:              response['info']['network'],
-          card_type:            response['info']['type'],
+          user:                              user,
+          type:                              response['type'],
+          id:                                response['_id'],
+          is_active:                         response['is_active'],
+          permission:                        response['allowed'],
+          nickname:                          response['info']['nickname'],
+          name_on_account:                   response['info']['name_on_account'],
+          bank_long_name:                    response['info']['bank_long_name'],
+          bank_name:                         response['info']['bank_name'],
+          account_type:                      response['info']['type'],
+          account_class:                     response['info']['class'],
+          account_number:                    response['info']['account_num'],
+          routing_number:                    response['info']['routing_num'],
+          address:                           response['info']['address'],
+          swift:                             response['info']['swift'],
+          ifsc:                              response['info']['ifsc'],
+          payee_name:                        response['info']['payee_name'],
+          document_id:                       response['info']['document_id'],
+          network:                           response['info']['network'],
+          interchange_type:                  response['info']['type'],
+          card_type:                         response['info']['card_type'],
+          card_hash:                         response['info']['card_hash'],
+          is_international:                  response['info']['is_international'],
+          monthly_withdrawals_remaining:     response['info']['monthly_withdrawals_remaining'],
           user_info:            nil,
           transactions:         nil,
           timeline:             nil,
@@ -144,6 +151,9 @@ module SynapsePayRest
 
           transaction_analysis = response['extra']['other']['transaction_analysis']
           args[:transaction_analysis] = transaction_analysis
+
+          access_token = response['extra']['other']['access_token']
+          args[:access_token] = access_token
         end
 
         if response['timeline']
@@ -158,6 +168,21 @@ module SynapsePayRest
           args[:address_subdivision]   = payee_address['address_subdivision']
           args[:address_country_code]  = payee_address['address_country_code']
           args[:address_postal_code]   = payee_address['address_postal_code']
+        end
+
+        if response['info']['preferences']
+          preferences = response['info']['preferences']
+          args[:allow_foreign_transactions]        = preferences['allow_foreign_transactions']
+          args[:atm_withdrawal_limit]              = preferences['atm_withdrawal_limit']
+          args[:max_pin_attempts]                  = preferences['max_pin_attempts']
+          args[:pos_withdrawal_limit]              = preferences['pos_withdrawal_limit']
+          args[:security_alerts]                   = preferences['security_alerts']
+        end
+
+        if response['info']['portfolio']
+          preferences = response['info']['portfolio']
+          args[:portfolio_BTC]        = preferences['BTC']
+          args[:portfolio_ETH]        = preferences['ETH']
         end
 
         self.new(**args)
@@ -227,6 +252,12 @@ module SynapsePayRest
         end
         if options[:document_id]
           payload['info']['document_id'] = options[:document_id]
+        end
+        if options[:card_type]
+          payload['info']['card_type'] = options[:card_type]
+        end
+        if options[:card_style_id]
+          payload['card_style_id'] = options[:card_style_id]
         end
 
         balance_fields = [:currency]
@@ -351,6 +382,16 @@ module SynapsePayRest
       raise ArgumentError, 'id must be a String' unless id.is_a?(String)
 
       Subnet.find(node: self, id: id)
+    end
+
+    # Get statement for node
+    # Only available for native synapse nodes
+    # 
+    # @raise [SynapsePayRest::Error]
+    # 
+    # @return [SynapsePayRest::Statement]
+    def get_statement()
+      Statement.by_node(client: self.user.client, node: self)
     end
 
     # Deactivates the node. 

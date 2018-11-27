@@ -114,3 +114,15 @@ def test_client_with_instutitions
   client = test_client
   {client: client}
 end
+
+def test_client_with_statements
+  client = test_client
+  {client: client}
+end
+
+def test_client_with_crypto_quote
+  client = test_client
+  {client: client}
+  test_values = test_client_with_user
+  user = test_values[:user]
+end

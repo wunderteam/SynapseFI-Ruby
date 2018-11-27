@@ -1,7 +1,5 @@
 module SynapsePayRest
   # Wrapper class for /institutions endpoints
-  # 
-  # 
   class Institutions
 
     # @!attribute [rw] client
@@ -13,7 +11,7 @@ module SynapsePayRest
       @client = client
     end
 
-    # Sends a GET request to /v3.1/institutions endpoint. Queries a specific subscription_id
+    # Sends a GET request to /v3.1/institutions endpoint. 
     # 
     # 
     # @raise [SynapsePayRest::Error] may return subclasses of error based on 
